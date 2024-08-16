@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Online bookmarks",
+  "name": "Bookmarks Manager",
   "version": "1.0",
   "description": "Extension to chrome's bookmarks.",
   "icons": {

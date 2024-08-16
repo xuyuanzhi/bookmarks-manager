@@ -39,7 +39,7 @@ header .logo img {max-width: 5rem; max-height: 5rem;}
         width: 1330px;
     }
 }
-ul > li {margin-top:0;}
+ul > li:first-child {margin-top:0;}
 ul > li ol > li {
 	padding-left: 0.25rem;
 }
@@ -73,7 +73,7 @@ button.btn {
     cursor: pointer;
 	margin-left: 0.3rem;
 }
-.link-text {width:100%;display:flex;}
+.link-text {width:100%;display:flex;align-items: center;}
 .link-text input {width:48%;border: 1px solid #000;margin-right: 1%;height: 1.6rem;display:none;}
 .link-btns {display:flex;align-items: center;}
 button.btn:hover {opacity:0.5;}
