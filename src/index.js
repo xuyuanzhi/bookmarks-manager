@@ -54,6 +54,9 @@ function displayBookmarks(nodes, parentNode, isTop) {
 		const moveItem = document.createElement('button');
 		moveItem.classList.add('btn');
 		moveItem.classList.add('btn-move');
+		moveItem.addEventListener('mousedown', startMoveBookmark);
+		moveItem.addEventListener('mousemove', moveBookmark);
+		moveItem.addEventListener('mouseup', endMoveBookmark);
 		
 		const editItem = document.createElement('button');
 		editItem.classList.add('btn');
@@ -327,6 +330,57 @@ function searchBookmarks(e) {
 	}
 }
 
+var active = false;
+var currentX;
+var currentY;
+var initialX;
+var initialY;
+var xOffset = 0;
+var yOffset = 0;
+var dragItem;
+
+function startMoveBookmark(e) {
+	initialX = e.clientX - xOffset;
+  	initialY = e.clientY - yOffset;
+ 
+ 	console.log(e.target);
+ 	console.log("clientX===" + e.clientX);
+ 	console.log("clientY===" + e.clientY);
+ 	
+	active = true;
+	dragItem = e.target.parentNode.parentNode.parentNode;
+	
+	var rect = dragItem.getBoundingClientRect();
+	
+	
+	console.log("left===" + rect.left);
+ 	console.log("top===" + rect.top);
+	
+	dragItem.style.position = 'absolute';
+    dragItem.style.width = '100%';
+    dragItem.style.left = (rect.left + window.scrollX) + 'px';
+    dragItem.style.top = (rect.top + window.scrollY) + 'px';
+}
+
+function moveBookmark(e) {
+	if (active) {
+	    e.preventDefault();
+	    
+	    currentX = e.clientX - initialX;
+	    currentY = e.clientY - initialY;
+	    
+	    dragItem.style.left = currentX + 'px';
+	    dragItem.style.top = currentY + 'px';
+  	}
+}
+
+function endMoveBookmark(e) {
+	initialX = currentX;
+  initialY = currentY;
+  
+  active = false;
+}
+
 // Add click event listeners to the buttons
 //document.getElementById('addButton').addEventListener('click', addBookmark);
 //document.getElementById('removeButton').addEventListener('click', removeBookmark);
@@ -335,7 +389,7 @@ function searchBookmarks(e) {
 //});
 document.addEventListener('dragover', function(event) {
     event.preventDefault(); // Prevent default behavior to allow dropping
-  });
+});
   
 document.getElementById('keyword').addEventListener('input', searchBookmarks);
 
