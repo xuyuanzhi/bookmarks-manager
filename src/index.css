@@ -82,7 +82,14 @@ button.btn-edit {background-image: url(images/edit.png);}
 button.btn-delete {background-image: url(images/delete.png);}
 button.btn-save {display:none;background-image: url(images/save.png);}
 button.btn-cancel {display:none;background-image: url(images/cancel.png);}
-.border-line {border-bottom:2px solid #000;}
+button.btn-up {background-image: url(images/up.png);}
+button.btn-down {background-image: url(images/down.png);}
+button.btn-plus {background-image: url(images/plus.png);}
+button.btn-minus {background-image: url(images/minus.png);}
+button.btn-folder {background-image: url(images/new_folder.png);}
+.border-line {border:1px solid #00000030;}
+.border-line-top {border-bottom:1px solid #00000030;border-left:1px solid #00000030;border-top:2px solid #000;border-right:1px solid #00000030;}
+.border-line-bottom {border-bottom:2px solid #000;border-left:1px solid #00000030;border-top:1px solid #00000030;border-right:1px solid #00000030;}
 
 .folder-div {display: flex; justify-content: space-between;padding: 0.25rem;}
 .folder-div input {display:none;width:96%;border: 1px solid #000;height: 1.6rem;}

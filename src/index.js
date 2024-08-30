@@ -20,6 +20,15 @@ chrome.bookmarks.getTree((tree) => {
   displayBookmarks(tree[0].children, bookmarkList, true);
 });
 
+var btn = document.getElementById('sidebarBtn');
+btn.addEventListener('click', function(){
+	chrome.windows.getCurrent({ populate: true }, (window) => {
+    	chrome.sidePanel.open({ windowId: window.id }, (e) => {
+			
+		});
+  	});
+});
+
 // Recursively display the bookmarks
 function displayBookmarks(nodes, parentNode, isTop) {
   for (const node of nodes) {
@@ -51,12 +60,20 @@ function displayBookmarks(nodes, parentNode, isTop) {
 		textItems.appendChild(urlInp);
 		textItems.setAttribute('class', 'link-text');
 		
+		/*const moveUpItem = document.createElement('button');
+		moveUpItem.classList.add('btn');
+		moveUpItem.classList.add('btn-up');
+		
+		const moveDownItem = document.createElement('button');
+		moveDownItem.classList.add('btn');
+		moveDownItem.classList.add('btn-down');*/
+		
 		const moveItem = document.createElement('button');
 		moveItem.classList.add('btn');
 		moveItem.classList.add('btn-move');
 		moveItem.addEventListener('mousedown', startMoveBookmark);
-		moveItem.addEventListener('mousemove', moveBookmark);
-		moveItem.addEventListener('mouseup', endMoveBookmark);
+		//moveItem.addEventListener('mousemove', moveBookmark);
+		//moveItem.addEventListener('mouseup', endMoveBookmark);
 		
 		const editItem = document.createElement('button');
 		editItem.classList.add('btn');
@@ -79,6 +96,8 @@ function displayBookmarks(nodes, parentNode, isTop) {
 		cancelItem.addEventListener('click', cancelEdit);
 		
 		const btns = document.createElement('div');
+		//btns.appendChild(moveUpItem);
+		//btns.appendChild(moveDownItem);
 		btns.appendChild(moveItem);
 		btns.appendChild(editItem);
 		btns.appendChild(delItem);
@@ -91,10 +110,12 @@ function displayBookmarks(nodes, parentNode, isTop) {
 		divItem.appendChild(textItems);
 		divItem.appendChild(btns);
 		divItem.classList.add('link-div');
+		divItem.setAttribute("data-id", node.id);
 		//divItem.setAttribute('draggable', 'true');
 		divItem.addEventListener('dragstart', function(event) {
-			console.log("dragstart======" + event.target.id)
-			event.dataTransfer.setData('text/plain', null); // You can use setData to set drag data if needed
+			var dragId = event.target.getAttribute('data-id');
+			console.log("dragstart======" + dragId);
+			event.dataTransfer.setData('text', dragId); // You can use setData to set drag data if needed
 		});
 		divItem.addEventListener('dragend', function(event) {
 			// Handle the dragend event if needed
@@ -106,15 +127,66 @@ function displayBookmarks(nodes, parentNode, isTop) {
 		divItem.addEventListener('dragenter', function(event) {
 			// Handle the dragend event if needed
 			console.log('dragenter===' + event.target);
-			if (!event.target.parentNode.classList.contains('border-line')) {
-				event.target.parentNode.classList.add('border-line');
+			var rect = event.target.getBoundingClientRect();
+			if (event.target.classList.contains('link-div')) {
+				console.log('offsetX,Y===' + event.offsetX + "," + event.offsetY);
+				console.log('left,top===' + rect.left + "," + rect.top);
+				if (event.offsetY < 13) {//从前面插入
+					event.target.classList.add('border-line-top');
+				} else {//从后面插入
+					event.target.classList.add('border-line-bottom');
+				}
+				
+				/*if (!event.target.classList.contains('border-line')) {
+					event.target.classList.add('border-line');
+				}*/
 			}
 		});
 		divItem.addEventListener('dragleave', function(event) {
 			// Handle the dragend event if needed
 			console.log('dragleave===' + event.target);
-			if (event.target.parentNode.classList.contains('border-line')) {
-				event.target.parentNode.classList.remove('border-line');
+			if (event.target.classList.contains('link-div')) {
+				if (event.target.classList.contains('border-line-top')) {
+					event.target.classList.remove('border-line-top');
+				}
+				if (event.target.classList.contains('border-line-bottom')) {
+					event.target.classList.remove('border-line-bottom');
+				}
+			}
+		});
+		divItem.addEventListener('drop', function(event) {
+			// Handle the dragend event if needed
+			console.log('drop===' + event.target.classList);
+			if (event.target.classList.contains('link-div')) {
+				//event.preventDefault();
+				var dragId = event.dataTransfer.getData('text');
+				var dropId = event.target.getAttribute('data-id');
+				console.log("dragId====" + dragId);
+				
+				chrome.bookmarks.get(dropId, function(list){
+					var dropItem = list[0];
+					if (dropItem) {
+						console.log("dropId====" + dropId + "," + dropItem.parentId + "," + dropItem.index);
+						console.log('offsetX,Y===' + event.offsetX + "," + event.offsetY);
+						
+						var index;
+						
+						if (event.offsetY < 13) {//从前面插入
+							index = dropItem.index;
+						} else {
+							index = dropItem.index+1;
+						}
+						
+						chrome.bookmarks.move(
+							dragId,
+							{parentId:dropItem.parentId, index:index},
+							function(l) {
+								//alert("l=" + l);
+								window.location.reload();
+							},
+						);
+					}
+				});
 			}
 		});
 		
@@ -129,15 +201,79 @@ function displayBookmarks(nodes, parentNode, isTop) {
 		divItem.appendChild(spanItem);
 		
 		if (isTop) {
-			const iconItem = document.createElement('span');
-			iconItem.classList.add('icon');
-			iconItem.classList.add('icon-minus');
-			divItem.appendChild(iconItem);
-		
 			divItem.classList.add('item-title');
 			divItem.addEventListener('click', expandOrRetract);
+			divItem.setAttribute("data-id", node.id);
+			
+			const folderItem = document.createElement('button');
+			folderItem.classList.add('btn');
+			folderItem.classList.add('btn-folder');
+			folderItem.addEventListener('click', function(event) {
+				event.stopPropagation();
+				var id = event.target.parentNode.parentNode.getAttribute('data-id');
+				chrome.bookmarks.create(
+  					{parentId:id, title:'New Folder'},function(){
+						window.location.reload();
+					}
+				);
+			});
+			
+			const iconItem = document.createElement('button');
+			iconItem.classList.add('btn');
+			iconItem.classList.add('btn-minus');
+			iconItem.classList.add('icon');
+			
+			const btns = document.createElement('div');
+			btns.appendChild(folderItem);
+			btns.appendChild(iconItem);
+			divItem.appendChild(btns);
+			
+			divItem.addEventListener('dragenter', function(event) {
+				// Handle the dragend event if needed
+				console.log('dragenter===' + event.target);
+				if (event.target.classList.contains('item-title')) {
+					event.target.classList.add('border-line');
+				}
+			});
+			divItem.addEventListener('dragleave', function(event) {
+				// Handle the dragend event if needed
+				console.log('dragleave===' + event.target);
+				if (event.target.classList.contains('item-title')) {
+					if (event.target.classList.contains('border-line')) {
+						event.target.classList.remove('border-line');
+					}
+				}
+			});
+			divItem.addEventListener('dragend', function(event) {
+				// Handle the dragend event if needed
+				console.log('dragend===' + event.target.id);
+				if (event.target.classList.contains('item-title')) {
+					if (event.target.classList.contains('border-line')) {
+						event.target.classList.remove('border-line');
+					}
+				}
+			});
+			divItem.addEventListener('drop', function(event) {
+				// Handle the dragend event if needed
+				console.log('drop===' + event.target.classList);
+				if (event.target.classList.contains('item-title')) {
+					//event.preventDefault();
+					var dragId = event.dataTransfer.getData('text');
+					var dropId = event.target.getAttribute('data-id');
+					console.log("dragId====" + dragId);
+					chrome.bookmarks.move(
+						dragId,
+						{parentId:dropId},
+						function(l) {
+							//alert("l=" + l);
+							window.location.reload();
+						},
+					);
+				}
+			});
 		} else {
 			divItem.classList.add('folder-div');
+			divItem.setAttribute("data-id", node.id);
 			
 			const titleInp = document.createElement('input');
 			titleInp.setAttribute('name','title');
@@ -147,6 +283,7 @@ function displayBookmarks(nodes, parentNode, isTop) {
 			const moveItem = document.createElement('button');
 			moveItem.classList.add('btn');
 			moveItem.classList.add('btn-move');
+			moveItem.addEventListener('mousedown', startMoveBookmark);
 			
 			const editItem = document.createElement('button');
 			editItem.classList.add('btn');
@@ -161,7 +298,7 @@ function displayBookmarks(nodes, parentNode, isTop) {
 			const saveItem = document.createElement('button');
 			saveItem.classList.add('btn');
 			saveItem.classList.add('btn-save');
-			saveItem.addEventListener('click', saveBookmark);
+			saveItem.addEventListener('click', saveFolder);
 			
 			const cancelItem = document.createElement('button');
 			cancelItem.classList.add('btn');
@@ -179,6 +316,54 @@ function displayBookmarks(nodes, parentNode, isTop) {
 			
 			divItem.appendChild(titleInp);
 			divItem.appendChild(btns);
+			divItem.addEventListener('dragstart', function(event) {
+				var dragId = event.target.getAttribute('data-id');
+				console.log("dragstart======" + dragId);
+				event.dataTransfer.setData('text', dragId); // You can use setData to set drag data if needed
+			});
+			divItem.addEventListener('dragenter', function(event) {
+				// Handle the dragend event if needed
+				console.log('dragenter===' + event.target);
+				if (event.target.classList.contains('folder-div')) {
+					event.target.classList.add('border-line');
+				}
+			});
+			divItem.addEventListener('dragleave', function(event) {
+				// Handle the dragend event if needed
+				console.log('dragleave===' + event.target);
+				if (event.target.classList.contains('folder-div')) {
+					if (event.target.classList.contains('border-line')) {
+						event.target.classList.remove('border-line');
+					}
+				}
+			});
+			divItem.addEventListener('dragend', function(event) {
+				// Handle the dragend event if needed
+				console.log('dragend===' + event.target.id);
+				if (event.target.classList.contains('folder-div')) {
+					if (event.target.classList.contains('border-line')) {
+						event.target.classList.remove('border-line');
+					}
+				}
+			});
+			divItem.addEventListener('drop', function(event) {
+				// Handle the dragend event if needed
+				console.log('drop===' + event.target.classList);
+				if (event.target.classList.contains('folder-div')) {
+					//event.preventDefault();
+					var dragId = event.dataTransfer.getData('text');
+					var dropId = event.target.getAttribute('data-id');
+					console.log("dragId====" + dragId);
+					chrome.bookmarks.move(
+						dragId,
+						{parentId:dropId},
+						function(l) {
+							//alert("l=" + l);
+							window.location.reload();
+						},
+					);
+				}
+			});
 		}
 		
 		const listItem = document.createElement('li');
@@ -197,21 +382,21 @@ function displayBookmarks(nodes, parentNode, isTop) {
 
 function expandOrRetract(e) {
 	var divItem = e.target;
-	var spanItem = e.target.getElementsByClassName('icon')[0];
+	var spanItem = divItem.getElementsByClassName('icon')[0];
 
 	if (!spanItem) {
-		divItem = e.target.parentNode;
-		spanItem = e.target.parentNode.getElementsByClassName('icon')[0];
+		divItem = e.target.parentNode.parentNode;
+		spanItem = divItem.getElementsByClassName('icon')[0];
 	}
 	
 	console.log("spanItem===" + spanItem);
-	if (spanItem.classList.contains('icon-plus')) {
-		spanItem.classList.remove('icon-plus');
-		spanItem.classList.add('icon-minus');
+	if (spanItem.classList.contains('btn-plus')) {
+		spanItem.classList.remove('btn-plus');
+		spanItem.classList.add('btn-minus');
 		divItem.nextElementSibling.style.display = "block";
 	} else {
-		spanItem.classList.remove('icon-minus');
-		spanItem.classList.add('icon-plus');
+		spanItem.classList.remove('btn-minus');
+		spanItem.classList.add('btn-plus');
 		divItem.nextElementSibling.style.display = "none";
 	}
 }
@@ -262,6 +447,16 @@ function saveBookmark(e) {
 	const newUrl = textItem.querySelectorAll('input[name="url"]')[0].value;
 	
 	chrome.bookmarks.update(id, {title:newTitle, url:newUrl}, () => {
+		location.reload(); // Refresh the popup
+    });
+}
+
+function saveFolder(e) {
+	const id = e.target.parentNode.id;
+	const titleItem = e.target.parentNode.previousElementSibling;
+	const newTitle = titleItem.value;
+	
+	chrome.bookmarks.update(id, {title:newTitle}, () => {
 		location.reload(); // Refresh the popup
     });
 }
@@ -338,47 +533,70 @@ var initialY;
 var xOffset = 0;
 var yOffset = 0;
 var dragItem;
+var dragItemId;
 
 function startMoveBookmark(e) {
-	initialX = e.clientX - xOffset;
-  	initialY = e.clientY - yOffset;
+	//initialX = e.clientX - xOffset;
+  	//initialY = e.clientY - yOffset;
  
- 	console.log(e.target);
- 	console.log("clientX===" + e.clientX);
- 	console.log("clientY===" + e.clientY);
+ 	//console.log(e.target);
+ 	//console.log("clientX===" + e.clientX);
+ 	//console.log("clientY===" + e.clientY);
  	
-	active = true;
-	dragItem = e.target.parentNode.parentNode.parentNode;
+	//active = true;
 	
-	var rect = dragItem.getBoundingClientRect();
+	var dragItem = e.target.parentNode.parentNode;
+	console.log("dragItem===" + dragItem.tagName + "--" + dragItem.className);
+	dragItem.setAttribute("draggable", true);
+	
+	//var rect = dragItem.getBoundingClientRect();
 	
 	
-	console.log("left===" + rect.left);
- 	console.log("top===" + rect.top);
+	//console.log("left===" + rect.left);
+ 	//console.log("top===" + rect.top);
+ 	
+ 	//dragItemId = e.target.parentNode.id;
+ 	
+ 	
+	/*document.querySelectorAll('ol > li > div').forEach(function(item) {
+		 item.setAttribute("draggable", true);
+	});*/
 	
-	dragItem.style.position = 'absolute';
+	/*dragItem.style.position = 'absolute';
     dragItem.style.width = '100%';
     dragItem.style.left = (rect.left + window.scrollX) + 'px';
-    dragItem.style.top = (rect.top + window.scrollY) + 'px';
+    dragItem.style.top = (rect.top + window.scrollY) + 'px';*/
 }
 
 function moveBookmark(e) {
-	if (active) {
-	    e.preventDefault();
-	    
-	    currentX = e.clientX - initialX;
-	    currentY = e.clientY - initialY;
-	    
-	    dragItem.style.left = currentX + 'px';
-	    dragItem.style.top = currentY + 'px';
-  	}
+    //const id = e.target.parentNode.id;
+    
+   /* chrome.bookmarks.move(
+  		id,
+  		destination: object,
+  		callback?: function,
+	); */
+    
+   
 }
 
 function endMoveBookmark(e) {
+	alert("endMoveBookmark");
 	initialX = currentX;
-  initialY = currentY;
-  
-  active = false;
+  	initialY = currentY;
+    
+    var dragItem = e.target.parentNode.parentNode.parentNode;
+    dragItem.setAttribute("draggable", false);
+    dragItemId = undefined;
+  	
+  	//window.location.reload();
+  //active = false;
+}
+
+function openSidePanel() {
+	chrome.windows.getCurrent({ populate: true }, (window) => {
+    	chrome.sidePanel.open({ windowId: window.id });
+  	});
 }
 
 // Add click event listeners to the buttons
